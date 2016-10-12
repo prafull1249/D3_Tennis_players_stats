@@ -6,25 +6,9 @@ from_csv['firstServe1'] = from_csv['firstServe1'].astype(str)
 from_csv['firstServe2'] = from_csv['firstServe2'].astype(str)
 
 players_stats = {}
-"""
-year,gender,tid,mid,player1,player2,country1,country2,firstServe1,firstServe2,ace1,ace2,double1,double2,firstPointWon1,
-firstPointWon2,secPointWon1,secPointWon2,fastServe1,fastServe2,avgFirstServe1,avgFirstServe2,avgSecServe1,avgSecServe2,
-break1,break2,return1,return2,total1,total2,winner1,winner2,error1,error2,net1,net2
-"""
-# headers = ["year","gender","player","w_firstServe_w","w_firstServe_l","l_firstServe_l","l_firstServe_w","w_ace_w",
-#            "w_ace_l","l_ace_l","l_ace_w","w_double_w","w_double_l","l_double_l","l_double_l", "w_firstPointWon_w",
-#            "w_firstPointWon_l","l_firstPointWon_l","l_firstPointWon_w","w_secPointWon_w","w_secPointWon_l",
-#            "l_secPointWon_l","l_secPointWon_w", "w_fastServe_w", "w_fastServe_l","l_fastServe_l","l_fastServe_w",
-#            "l_avgFirstServe_l","w_avgFirstServe_w","l_avgFirstServe_l","l_avgFirstServe_w","w_avgSecServe_w"
-#            ,"w_avgSecServe_l", "l_avgSecServe_l","l_avgSecServe_w","w_break_w","w_break_l","l_break_l","l_break_w",
-#            "w_return_w","w_return_l","l_return_l","l_return_w","w_total_w","w_total_l","l_total_l","l_total_w",
-#            "w_winner_w","w_winner_l","l_winner_l","l_winner_w","w_error_w","w_error_l","l_error_l","l_error_w"
-#             ,"w_net_w","w_net_l","l_net_l","l_net_w" ]
 
 headers = ["year", "player", "winner", "error", "ace", "firstServe", "double", "firstPointWon", "secPointWon",
            "fastServe", "avgFirstServe", "break", "return", "total", "net"]
-
-# headers = ["year", "player", "winner", "error", "ace"]
 
 # Remove null entries
 from_csv = from_csv[from_csv.fastServe1.notnull()]
@@ -48,9 +32,16 @@ from_csv['net1'] = from_csv['net1'].str[0:-1].astype(float)
 from_csv['net2'] = from_csv['net2'].str[0:-1].astype(float)
 
 from_csv.info()
-
-losers = set(from_csv['player2'])
-winnners = set(from_csv['player1'])
+#
+# losers = set(from_csv['player2'])
+# winnners = set(from_csv['player1'])
+# print len(winnners)
+# winners = winnners.intersection(losers)
+# print len(winnners)
+# print len(winners)
+#
+# for i in winners:
+#     print from_csv[from_csv.player1 == i]
 
 total_matches = len(from_csv)
 
@@ -199,7 +190,6 @@ data_overall = []
 for index, value in enumerate(overall_stats[0].keys()):
     header[value] = index
 
-print header
 for i in range(0, len(overall_stats)):
     temp = []
     for key in header:
@@ -212,54 +202,60 @@ with open("aster_data_overall.csv", 'w') as file_w:
     for i in data_overall:
         file_w.write(",".join(str(l) for l in i))
         file_w.write("\n")
-        # print sum(i.ace1)/len(from_csv)
 
 features = ["winner", "error", "ace", "firstServe", "double", "firstPointWon", "secPointWon",
             "fastServe", "avgFirstServe", "break", "return", "total", "net"]
 avg_stats = []
-players_set = set(from_csv['player2']).intersection(from_csv['player1'])
-
+players_set = set(from_csv['player1']).intersection(from_csv['player2'])
 with open("player.csv",'w') as player_file:
     player_file.write(', '.join(i for i in players_set))
 
 for i in players_set:
     player_stat = {}
     player_stat["name"] = str(i)
-    won_set = from_csv[from_csv.player1 == str(i)]
-    lost_set = from_csv[from_csv.player2 == str(i)]
-    won = len(won_set)
-    lost = len(lost_set)
-    total = won + lost
-    player_stat["won"] = won
-    player_stat["won_percent"] = math.ceil((float(won) / total) * 100) / 100
-    player_stat["lost"] = lost
-    for j, value in enumerate(features):
-        total_won = len(won_set)
-        total_loss = len(lost_set)
-        feature = features[j]
-        won = math.ceil(float(sum(won_set[feature + "1"]))) * 100 / total
-        loss = math.ceil(float(sum(lost_set[feature + "2"]))) / total
-        player_stat[feature + "_w"] = won
-        player_stat[feature + "_l"] = loss
-    print player_stat
-    avg_stats.append(player_stat)
+    won_set = from_csv[from_csv.player1 == i]
+    lost_set = from_csv[from_csv.player2 == i]
+    match_won = len(won_set)
+    match_lost = len(lost_set)
+    total = match_won + match_lost
+    player_stat["won"] = match_won
+    if total==0:
+        print "0-matches won by {0}".format(i)
+    else:
+        player_stat["won_percent"] = math.ceil((float(match_won) / total) * 100) / 100
+        player_stat["lost"] = match_lost
+        for j, value in enumerate(features):
+            total_won = len(won_set)
+            total_loss = len(lost_set)
+            feature = features[j]
+            won = math.ceil(float(sum(won_set[feature + "1"]))) * 100 / match_won
+            loss = math.ceil(float(sum(lost_set[feature + "2"]))) / match_lost
+            player_stat[feature + "_w"] = won
+            player_stat[feature + "_l"] = loss
+        avg_stats.append(player_stat)
 
 total_features = []
 for feature in features:
     total_features.append(feature+"_w")
     total_features.append(feature+"_l")
 
-header_pl = ["name","won","lost","won_percent"]
+header_pl = ["name", "won", "lost", "won_percent"]
 total_features = total_features + header_pl
 player_overall = []
 for stat in avg_stats:
     temp = []
     for feature in total_features:
-
         temp.append(stat[feature])
     player_overall.append(temp)
 
-with open("aster_data_players.csv", 'w') as file_w:
+# sort according to win_percent
+df_players = pd.DataFrame(avg_stats)
+
+df_players = df_players.sort_values(by='won_percent', ascending=0)
+df_players.iloc[:50].to_csv('aster_data_players.csv', index=False)
+df_players['name'][:50].to_csv('players.csv', index=False)
+
+with open("normal_aster_data_players.csv", 'w') as file_w:
     file_w.write(",".join(str(l) for l in total_features))
     file_w.write("\n")
     for i in player_overall:
